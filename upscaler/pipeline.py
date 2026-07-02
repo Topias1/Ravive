@@ -345,7 +345,8 @@ def run_single_file(
                 frames_dir,
                 up_dir,
                 opts["model"],
-                opts["jobs"]
+                opts["jobs"],
+                model_path=opts.get("model_path")
             )
             run_realesrgan_stream(real_cmd, input_abs, seg_name)
 

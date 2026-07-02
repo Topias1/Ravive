@@ -52,6 +52,11 @@ def main(argv: List[str] = None) -> int:
         default="realesrgan-x4plus",
         help="Real-ESRGAN model name to use. Defaults to 'realesrgan-x4plus'."
     )
+    parser.add_argument(
+        "--model-path",
+        dest="model_path",
+        help="Path to the directory containing Real-ESRGAN model files (.bin/.param)."
+    )
     
     # Encoder and quality
     parser.add_argument(

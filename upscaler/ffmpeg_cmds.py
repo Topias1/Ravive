@@ -59,7 +59,8 @@ def build_realesrgan_cmd(
     input_dir: str,
     output_dir: str,
     model: str = "realesrgan-x4plus",
-    jobs: str = "auto"
+    jobs: str = "auto",
+    model_path: Optional[str] = None
 ) -> List[str]:
     """Builds the realesrgan-ncnn-vulkan command to upscale frames."""
     cmd = [
@@ -71,11 +72,14 @@ def build_realesrgan_cmd(
         "-f", "png"
     ]
     
-    # Auto-resolve model directory next to binary or in parent directory
-    bin_dir = os.path.dirname(os.path.abspath(realesrgan_bin))
-    models_dir = os.path.join(bin_dir, "models")
-    if not os.path.isdir(models_dir):
-        models_dir = os.path.abspath(os.path.join(bin_dir, "..", "models"))
+    # Use specified model path, otherwise auto-resolve next to binary or in parent directory
+    if model_path:
+        models_dir = os.path.abspath(model_path)
+    else:
+        bin_dir = os.path.dirname(os.path.abspath(realesrgan_bin))
+        models_dir = os.path.join(bin_dir, "models")
+        if not os.path.isdir(models_dir):
+            models_dir = os.path.abspath(os.path.join(bin_dir, "..", "models"))
         
     if os.path.isdir(models_dir):
         cmd.extend(["-m", models_dir])

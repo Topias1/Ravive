@@ -178,13 +178,7 @@ def detect_video_type(video_path: str) -> str:
     
     # 1. Check filename for animation keywords (fast path)
     base_lower = os.path.basename(video_path).lower()
-    animation_keywords = [
-        "anime", "animation", "cartoon", "iceage", "ice age", "toystory", "toy story",
-        "shrek", "pixar", "disney", "dreamworks", "ghibli", "naruto", "onepiece", "one piece",
-        "bleach", "dragonball", "dragon ball", "boruto", "pokemon", "manga", "frozen",
-        "ratatouille", "coco", "moana", "tangled", "cinderella", "aladdin", "madagascar",
-        "kungfupanda", "kung fu panda", "minions", "despicable", "simpsons", "family guy"
-    ]
+    animation_keywords = ["anime", "animation", "cartoon"]
     if any(kw in base_lower for kw in animation_keywords):
         return "animation"
         

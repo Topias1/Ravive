@@ -1,5 +1,9 @@
 # VideoUpscalePy
 
+> [!IMPORTANT]
+> 🚀 **[Download VideoUpscalePy v1.0 for macOS (DMG)](https://github.com/Topias1/apple-silicon-video-upscaler/releases/download/v1.0/VideoUpscalePy.dmg)**  
+> *Fully standalone and self-contained installer (no external dependencies, ffmpeg, ffprobe, or Upscayl installations required).*
+
 A robust, resumable command-line pipeline that upscales videos using **Real-ESRGAN-ncnn-vulkan** (GPU-accelerated inference) for frame upscaling and **ffmpeg** for demuxing, downscaling, and hardware-accelerated re-encoding.
 
 Developed and optimized for **Apple Silicon macOS**, but architected from the ground up to support **Linux** (NVIDIA NVENC, Intel/AMD VAAPI, and CPU libx265).

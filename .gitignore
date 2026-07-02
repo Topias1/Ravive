@@ -17,3 +17,5 @@ dist/
 upscaler/bin/
 upscaler/models/
 *.png
+.planning/codebase/
+docs/superpowers/specs/

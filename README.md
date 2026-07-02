@@ -15,30 +15,20 @@ Developed and optimized for **Apple Silicon macOS**, but architected from the gr
 
 ---
 
-## Installation
+## Installation & Standalone App
 
-### macOS (Apple Silicon)
+### Standalone macOS Application
+For macOS users, a pre-compiled, **100% self-contained** standalone bundle is available:
+* **Zero External Dependencies**: You do **NOT** need to install `ffmpeg`, `ffprobe`, `realesrgan-ncnn-vulkan`, or *Upscayl*. All binaries and AI models are pre-bundled inside the app.
+* **To run**: Simply double-click `dist/AppleSiliconVideoUpscaler.app` in Finder, or run:
+  ```bash
+  open dist/AppleSiliconVideoUpscaler.app
+  ```
 
-Install the required tools using [Homebrew](https://brew.sh):
-
-```bash
-brew install ffmpeg realesrgan-ncnn-vulkan
-```
-
-### Linux
-
-1. Install `ffmpeg` (>= 5.1):
-   ```bash
-   sudo apt-get install ffmpeg
-   ```
-2. Download the latest binary release of `realesrgan-ncnn-vulkan` from [GitHub Releases](https://github.com/xinntao/Real-ESRGAN-ncnn-vulkan) and add it to your `PATH` or point the CLI to it.
-
-### Ubuntu-on-UTM (Venus Virtualization)
-
-To run GPU-accelerated upscaling inside a Linux VM on Apple Silicon:
-1. Ensure you are using **UTM v5.0+** with **Venus (Vulkan virtualization)** enabled.
-2. In the guest, install the Mesa Venus Vulkan driver.
-3. Install `ffmpeg` inside the guest. The encoding will run on the CPU (`libx265`), while the upscaling executes via GPU acceleration.
+### Developer Setup (Source Code Run)
+If you are running or modifying the raw Python source code directly:
+1. Ensure your local copies of the helper binaries (`ffmpeg`, `ffprobe`, and `upscaler/bin/upscayl-bin`) and AI models (`upscaler/models/*.param`/`.bin`) are present in the project structure.
+2. The pipeline will automatically locate and run them from the local folders, with no system PATH queries or external installations needed.
 
 ---
 
@@ -98,6 +88,7 @@ options:
                         How to handle variable-frame-rate (VFR) video inputs. Defaults to 'error'.
   --work-dir WORK_DIR   Working directory to store intermediate segments and frames. Derived by default.
   --keep-work           Keep intermediate segment files and folders on success.
+  --force               Force overwrite existing output files instead of resuming/skipping.
   --fail-fast           Abort the entire batch operation on the first file failure.
   --workers WORKERS     Number of segment chunks to process in parallel. Defaults to 1.
   --interpolate-fps INTERPOLATE_FPS

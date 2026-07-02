@@ -9,25 +9,23 @@ from . import ToolError
 
 def get_ffmpeg_path() -> str:
     if getattr(sys, "frozen", False):
-        bundle_dir = sys._MEIPASS
-        bundled = os.path.join(bundle_dir, "ffmpeg")
-        if os.path.exists(bundled) and os.path.isfile(bundled):
-            return bundled
-    path = shutil.which("ffmpeg")
-    if not path:
-        raise ToolError("ffmpeg binary not found in PATH.")
-    return path
+        base_dir = sys._MEIPASS
+    else:
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    bundled = os.path.join(base_dir, "ffmpeg")
+    if os.path.exists(bundled) and os.path.isfile(bundled):
+        return os.path.abspath(bundled)
+    raise ToolError("ffmpeg binary not found in the application bundle.")
 
 def get_ffprobe_path() -> str:
     if getattr(sys, "frozen", False):
-        bundle_dir = sys._MEIPASS
-        bundled = os.path.join(bundle_dir, "ffprobe")
-        if os.path.exists(bundled) and os.path.isfile(bundled):
-            return bundled
-    path = shutil.which("ffprobe")
-    if not path:
-        raise ToolError("ffprobe binary not found in PATH.")
-    return path
+        base_dir = sys._MEIPASS
+    else:
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    bundled = os.path.join(base_dir, "ffprobe")
+    if os.path.exists(bundled) and os.path.isfile(bundled):
+        return os.path.abspath(bundled)
+    raise ToolError("ffprobe binary not found in the application bundle.")
 
 def get_ffmpeg_version() -> Tuple[int, int]:
     ffmpeg_path = get_ffmpeg_path()
@@ -88,7 +86,7 @@ def detect_platform() -> str:
         return "other"
 
 def find_realesrgan(custom_path: Optional[str] = None) -> str:
-    # 0. Check local project directory or PyInstaller bundle directory (frozen)
+    # Check local project directory or PyInstaller bundle directory (frozen)
     if getattr(sys, "frozen", False):
         base_dir = sys._MEIPASS
     else:
@@ -98,44 +96,8 @@ def find_realesrgan(custom_path: Optional[str] = None) -> str:
     local_bin = os.path.join(base_dir, "upscaler", "bin", "upscayl-bin")
     if os.path.exists(local_bin) and os.path.isfile(local_bin):
         return os.path.abspath(local_bin)
-            
-    # 1. custom_path
-    if custom_path:
-        if os.path.exists(custom_path) and os.path.isfile(custom_path):
-            return os.path.abspath(custom_path)
-        # Try checking if executable in PATH or absolute
-        path = shutil.which(custom_path)
-        if path:
-            return os.path.abspath(path)
-        raise ToolError(f"Specified realesrgan binary path not found or not a file: {custom_path}")
-    
-    # 2. REALESRGAN_BIN env var
-    env_path = os.environ.get("REALESRGAN_BIN")
-    if env_path:
-        if os.path.exists(env_path) and os.path.isfile(env_path):
-            return os.path.abspath(env_path)
-        path = shutil.which(env_path)
-        if path:
-            return os.path.abspath(path)
-        raise ToolError(f"REALESRGAN_BIN environment variable specified path not found: {env_path}")
         
-    # 3. PATH lookup of realesrgan-ncnn-vulkan
-    path = shutil.which("realesrgan-ncnn-vulkan")
-    if path:
-        return os.path.abspath(path)
-        
-    # Standard installation hints
-    plat = detect_platform()
-    if plat == "macos":
-        hint = "Install with: brew install ffmpeg realesrgan-ncnn-vulkan"
-    elif plat == "linux":
-        hint = "Install with: GitHub-release binary for realesrgan-ncnn-vulkan + apt-get install ffmpeg"
-    else:
-        hint = "Ensure ffmpeg, ffprobe, and realesrgan-ncnn-vulkan are in your PATH."
-        
-    raise ToolError(
-        f"realesrgan-ncnn-vulkan binary not found. {hint}"
-    )
+    raise ToolError("upscayl-bin binary not found in the application bundle.")
 
 def verify_tools(realesrgan_path: Optional[str] = None) -> Dict[str, any]:
     # Check ffmpeg & ffprobe paths

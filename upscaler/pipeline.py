@@ -106,9 +106,20 @@ def run_realesrgan_stream(
                 if show_progress and line and "%" in line:
                     try:
                         val_str = line.split("%")[0].strip().split()[-1]
+                        val_str = val_str.replace(",", ".")
                         pct = float(val_str)
                         pct = max(0.0, min(100.0, pct))
-                        if pct - last_pct >= 1.0 or pct == 100.0 or last_pct < 0:
+                        
+                        if up_dir and total_frames and total_frames > 0:
+                            try:
+                                files_upscaled = len([f for f in os.listdir(up_dir) if f.endswith(".png")])
+                            except Exception:
+                                files_upscaled = 0
+                            overall_pct = ((files_upscaled + (pct / 100.0)) / total_frames) * 100.0
+                            overall_pct = max(0.0, min(100.0, overall_pct))
+                            pct = overall_pct
+                            
+                        if pct - last_pct >= 0.5 or pct == 100.0 or last_pct < 0:
                             last_pct = pct
                             bar_len = 25
                             filled_len = int(round(bar_len * pct / 100))

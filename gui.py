@@ -75,6 +75,7 @@ def run_upscale_thread(cmd_args):
                                 val_str = line.split("%")[0].strip().split()[-1]
                                 if "[" in val_str:
                                     val_str = val_str.split("]")[-1].strip()
+                                val_str = val_str.replace(",", ".")
                                 pct = float(val_str)
                                 task_state["progress"] = max(0.0, min(100.0, pct))
                             except ValueError:

@@ -3,6 +3,8 @@
 > [!IMPORTANT]
 > 🚀 **[Download VideoUpscalAI v1.0 for macOS (DMG)](https://github.com/Topias1/VideoUpscalAI/releases/download/v1.0/VideoUpscalAI.dmg)**
 
+![VideoUpscalAI Interface](screenshot.png)
+
 A robust, resumable command-line pipeline that upscales videos using **Real-ESRGAN-ncnn-vulkan** (GPU-accelerated inference) for frame upscaling and **ffmpeg** for demuxing, downscaling, and hardware-accelerated re-encoding.
 
 Developed and optimized for **Apple Silicon macOS**, but architected from the ground up to support **Linux** (NVIDIA NVENC, Intel/AMD VAAPI, and CPU libx265).

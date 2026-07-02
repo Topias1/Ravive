@@ -27,7 +27,18 @@ def run_upscale_thread(cmd_args):
         task_state["logs"] = ["Starting upscaler CLI pipeline..."]
         task_state["output_file"] = ""
         
-    cmd = [".venv/bin/python", "upscale.py"] + cmd_args
+    import sys
+    if getattr(sys, 'frozen', False):
+        bundle_dir = sys._MEIPASS
+        python_bin = sys.executable
+    else:
+        bundle_dir = os.path.dirname(os.path.abspath(__file__))
+        python_bin = os.path.join(bundle_dir, ".venv", "bin", "python")
+        if not os.path.exists(python_bin):
+            python_bin = sys.executable
+            
+    upscale_script = os.path.join(bundle_dir, "upscale.py")
+    cmd = [python_bin, upscale_script] + cmd_args
     
     try:
         active_process = subprocess.Popen(
@@ -565,15 +576,16 @@ HTML_CONTENT = """<!DOCTYPE html>
                 <label for="input_file">Vidéo ou Dossier source</label>
                 <div class="input-with-btn">
                     <input type="text" id="input_file" required placeholder="Sélectionnez un fichier ou un dossier...">
-                    <button type="button" class="btn-browse" onclick="openExplorer('input_file')">📂 Parcourir</button>
+                    <button type="button" class="btn-browse" onclick="openExplorer('input_file', false)">🎥 Fichier</button>
+                    <button type="button" class="btn-browse" onclick="openExplorer('input_file', true)">📁 Dossier</button>
                 </div>
             </div>
 
             <div class="form-group">
-                <label for="output_file">Chemin ou dossier de sortie (Optionnel)</label>
+                <label for="output_file">Dossier de sortie (Optionnel)</label>
                 <div class="input-with-btn">
                     <input type="text" id="output_file" placeholder="Ex: /Users/amnesia/Downloads/">
-                    <button type="button" class="btn-browse" onclick="openExplorer('output_file')">📂 Parcourir</button>
+                    <button type="button" class="btn-browse" onclick="openExplorer('output_file', true)">📁 Dossier</button>
                 </div>
             </div>
 
@@ -665,10 +677,22 @@ HTML_CONTENT = """<!DOCTYPE html>
         let pollInterval = null;
         let activeInputId = "";
 
-        function openExplorer(inputId) {
-            activeInputId = inputId;
-            document.getElementById("explorerModal").style.display = "flex";
-            loadDir("");
+        function openExplorer(inputId, isFolder = false) {
+            if (window.pywebview && window.pywebview.api) {
+                if (isFolder) {
+                    window.pywebview.api.select_folder().then(path => {
+                        if (path) document.getElementById(inputId).value = path;
+                    });
+                } else {
+                    window.pywebview.api.select_file().then(path => {
+                        if (path) document.getElementById(inputId).value = path;
+                    });
+                }
+            } else {
+                activeInputId = inputId;
+                document.getElementById("explorerModal").style.display = "flex";
+                loadDir("");
+            }
         }
 
         function closeExplorer() {

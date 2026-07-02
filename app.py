@@ -1,47 +1,46 @@
 import os
 import sys
+
 try:
     sys.stdout.reconfigure(write_through=True, line_buffering=True)
     sys.stderr.reconfigure(write_through=True, line_buffering=True)
 except Exception:
     pass
-import threading
-import time
-import webview
-from gui import main as start_server, active_process
-
-class Api:
-    def __init__(self):
-        self.window = None
-
-    def select_file(self):
-        # Open native macOS Finder file sheet
-        if not self.window:
-            return ""
-        result = self.window.create_file_dialog(
-            webview.OPEN_DIALOG,
-            file_types=('Video files (*.mp4;*.mkv;*.mov;*.avi;*.webm)', 'All files (*.*)')
-        )
-        return result[0] if result else ""
-
-    def select_folder(self):
-        # Open native macOS Finder folder sheet
-        if not self.window:
-            return ""
-        result = self.window.create_file_dialog(webview.FOLDER_DIALOG)
-        return result[0] if result else ""
-
-def on_closed():
-    # Clean up background process when the app closes
-    global active_process
-    if active_process:
-        try:
-            active_process.terminate()
-        except Exception:
-            pass
-    sys.exit(0)
 
 def main():
+    import threading
+    import time
+    import webview
+    from gui import main as start_server
+    
+    class Api:
+        def __init__(self):
+            self.window = None
+
+        def select_file(self):
+            if not self.window:
+                return ""
+            result = self.window.create_file_dialog(
+                webview.OPEN_DIALOG,
+                file_types=('Video files (*.mp4;*.mkv;*.mov;*.avi;*.webm)', 'All files (*.*)')
+            )
+            return result[0] if result else ""
+
+        def select_folder(self):
+            if not self.window:
+                return ""
+            result = self.window.create_file_dialog(webview.FOLDER_DIALOG)
+            return result[0] if result else ""
+
+    def on_closed():
+        from gui import active_process
+        if active_process:
+            try:
+                active_process.terminate()
+            except Exception:
+                pass
+        sys.exit(0)
+
     # Start the server in a separate thread
     server_thread = threading.Thread(target=start_server)
     server_thread.daemon = True
@@ -72,7 +71,6 @@ def main():
     webview.start()
 
 if __name__ == "__main__":
-    import os
     if os.environ.get("VIDEO_UPSCALER_CLI") == "1":
         # Run as the CLI upscaler helper
         import upscale

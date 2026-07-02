@@ -2,6 +2,8 @@ import json
 import os
 import shutil
 import subprocess
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from fractions import Fraction
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -74,7 +76,7 @@ def run_cmd_checked(cmd: List[str], file_path: str, stage: str, chunk: Optional[
             f"Failed to execute command for {stage}{chunk_info} for file {file_path}: {e}"
         )
 
-def run_realesrgan_stream(cmd: List[str], file_path: str, chunk: str) -> None:
+def run_realesrgan_stream(cmd: List[str], file_path: str, chunk: str, show_progress: bool = True) -> None:
     try:
         proc = subprocess.Popen(
             cmd,
@@ -93,7 +95,7 @@ def run_realesrgan_stream(cmd: List[str], file_path: str, chunk: str) -> None:
             if char in ("\r", "\n"):
                 line = "".join(buffer).strip()
                 buffer.clear()
-                if line and "%" in line:
+                if show_progress and line and "%" in line:
                     try:
                         val_str = line.split("%")[0].strip().split()[-1]
                         pct = float(val_str)
@@ -109,7 +111,8 @@ def run_realesrgan_stream(cmd: List[str], file_path: str, chunk: str) -> None:
                 
         proc.wait()
         # Print a final newline to clear the progress line
-        print()
+        if show_progress:
+            print()
         
         if proc.returncode != 0:
             stderr_left = proc.stderr.read()
@@ -189,6 +192,17 @@ def run_single_file(
     # 1. Probe input
     info = probe_video(input_abs)
     
+    # Auto-detect model if 'auto' is selected
+    if opts.get("model") == "auto":
+        from .probe import detect_video_type
+        v_type = detect_video_type(input_abs)
+        is_upscayl = "upscayl" in os.path.basename(tools_info["realesrgan_path"]).lower()
+        if v_type == "animation":
+            opts["model"] = "digital-art-4x" if is_upscayl else "realesr-animevideov3"
+        else:
+            opts["model"] = "upscayl-standard-4x" if is_upscayl else "realesrgan-x4plus"
+        print(f"Auto-detected content type: {v_type}. Using model: {opts['model']}")
+
     # 2. Preset Guard & VFR/HDR validation
     check_preset_guard(info.height, opts["preset"])
     check_vfr_mode(info.is_vfr, opts["vfr_mode"])
@@ -273,38 +287,44 @@ def run_single_file(
 
     # 5. Process each segment
     total_segments = len(segments)
-    
-    # Build list for concat later
     concat_list_path = os.path.join(work_dir, "concat_list.txt")
     
-    iterator = range(total_segments)
-    if has_tqdm:
-        iterator = tqdm(iterator, desc="Processing segments")
-
-    for i in iterator:
+    manifest_lock = threading.Lock()
+    print_lock = threading.Lock()
+    workers = opts.get("workers", 1)
+    
+    def process_segment(i: int) -> None:
         seg_path = segments[i]
         seg_name = os.path.basename(seg_path)
         seg_stem = Path(seg_path).stem
-        
         out_seg_path = os.path.join(seg_out_dir, f"{seg_stem}.mp4")
         
-        if not has_tqdm:
-            print(f"Segment {i+1}/{total_segments}: {seg_name}")
-
+        frames_dir = os.path.join(work_dir, f"frames_{seg_stem}")
+        up_dir = os.path.join(work_dir, f"up_{seg_stem}")
+        
         # Try to validate if already completed
         skip_chunk = False
-        if os.path.exists(out_seg_path):
+        with manifest_lock:
+            already_completed = manifest["chunks"].get(seg_name) == "completed"
+            
+        if already_completed and os.path.exists(out_seg_path):
             try:
                 in_count = get_exact_frame_count(seg_path)
                 out_count = get_exact_frame_count(out_seg_path)
                 if in_count == out_count and out_count > 0:
                     skip_chunk = True
-                    if not has_tqdm:
-                        print(f"  Valid output segment exists. Skipping.")
+                    if workers == 1:
+                        print(f"Segment {i+1}/{total_segments}: {seg_name} (Skipped - already completed)")
             except Exception:
                 pass
 
         if not skip_chunk:
+            if workers > 1:
+                with print_lock:
+                    print(f"Segment {i+1}/{total_segments}: {seg_name} starting...")
+            elif not has_tqdm:
+                print(f"Segment {i+1}/{total_segments}: {seg_name}")
+
             # Wipe frames and up dirs
             if os.path.exists(frames_dir):
                 shutil.rmtree(frames_dir)
@@ -319,7 +339,7 @@ def run_single_file(
             # Stage 1: Extract frames
             extract_cmd = build_extract_cmd(
                 seg_path,
-                work_dir,
+                frames_dir,
                 info.fps,
                 info.is_hdr,
                 opts["hdr_mode"],
@@ -348,7 +368,7 @@ def run_single_file(
                 opts["jobs"],
                 model_path=opts.get("model_path")
             )
-            run_realesrgan_stream(real_cmd, input_abs, seg_name)
+            run_realesrgan_stream(real_cmd, input_abs, seg_name, show_progress=(workers == 1))
 
             # Verify upscale PNGs match input count
             up_png_files = [f for f in os.listdir(up_dir) if f.endswith(".png")]
@@ -369,7 +389,9 @@ def run_single_file(
                 preset,
                 opts["encoder"],
                 opts["quality"],
-                opts.get("bitrate")
+                opts.get("bitrate"),
+                interpolate_fps=opts.get("interpolate_fps"),
+                temporal_denoise=opts.get("temporal_denoise", False)
             )
             run_cmd_checked(encode_cmd, input_abs, "re-encode", seg_name)
 
@@ -382,15 +404,35 @@ def run_single_file(
                     f"Encoded frame count: {encoded_frame_count}"
                 )
 
-            # Update manifest
-            manifest["chunks"][seg_name] = "completed"
-            save_manifest(manifest_path, manifest)
+            # Update manifest under lock
+            with manifest_lock:
+                manifest["chunks"][seg_name] = "completed"
+                save_manifest(manifest_path, manifest)
 
             # Stage 4: Clean up frames & up dirs
             if os.path.exists(frames_dir):
                 shutil.rmtree(frames_dir)
             if os.path.exists(up_dir):
                 shutil.rmtree(up_dir)
+                
+            if workers > 1:
+                with print_lock:
+                    print(f"Segment {i+1}/{total_segments}: {seg_name} completed.")
+
+    # Execute sequentially or in parallel
+    if workers > 1:
+        print(f"Processing {total_segments} segments in parallel using {workers} workers...")
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = [executor.submit(process_segment, i) for i in range(total_segments)]
+            # Re-raise any thread exceptions
+            for fut in futures:
+                fut.result()
+    else:
+        iterator = range(total_segments)
+        if has_tqdm:
+            iterator = tqdm(iterator, desc="Processing segments")
+        for i in iterator:
+            process_segment(i)
 
     # 6. Finalization
     # Write concat list file

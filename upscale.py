@@ -49,8 +49,8 @@ def main(argv: List[str] = None) -> int:
     )
     parser.add_argument(
         "--model",
-        default="realesrgan-x4plus",
-        help="Real-ESRGAN model name to use. Defaults to 'realesrgan-x4plus'."
+        default="auto",
+        help="Real-ESRGAN model name to use (e.g. 'realesrgan-x4plus', 'realesr-animevideov3'). Use 'auto' to auto-detect content type. Defaults to 'auto'."
     )
     parser.add_argument(
         "--model-path",
@@ -75,6 +75,18 @@ def main(argv: List[str] = None) -> int:
         "--bitrate",
         help="Target video bitrate (e.g. 12M, 40000k). Overrides --quality."
     )
+    parser.add_argument(
+        "--interpolate-fps",
+        type=int,
+        dest="interpolate_fps",
+        help="Enable motion-compensated frame interpolation to the target framerate (e.g. 60)."
+    )
+    parser.add_argument(
+        "--temporal-denoise",
+        action="store_true",
+        dest="temporal_denoise",
+        help="Enable 3D temporal denoising filter (hqdn3d) to stabilize frame transitions."
+    )
     
     # Real-ESRGAN runner config
     parser.add_argument(
@@ -95,6 +107,12 @@ def main(argv: List[str] = None) -> int:
         default=12.0,
         dest="chunk_seconds",
         help="Duration of pre-split chunks in seconds. Defaults to 12.0."
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="Number of segment chunks to process in parallel. Defaults to 1."
     )
     parser.add_argument(
         "--hdr-mode",

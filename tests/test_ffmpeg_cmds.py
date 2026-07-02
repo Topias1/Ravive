@@ -23,7 +23,7 @@ def test_build_split_cmd():
 def test_build_extract_cmd_sdr_cfr():
     cmd = build_extract_cmd(
         segment_path="/work/seg_in/seg_0000.mkv",
-        work_dir="/work",
+        frames_dir="/work/frames",
         fps="24000/1001",
         is_hdr=False,
         hdr_mode="tonemap",
@@ -38,7 +38,7 @@ def test_build_extract_cmd_sdr_cfr():
 def test_build_extract_cmd_hdr_tonemap():
     cmd = build_extract_cmd(
         segment_path="/work/seg_in/seg_0000.mkv",
-        work_dir="/work",
+        frames_dir="/work/frames",
         fps="24000/1001",
         is_hdr=True,
         hdr_mode="tonemap",
@@ -55,7 +55,7 @@ def test_build_extract_cmd_hdr_tonemap():
 def test_build_extract_cmd_vfr_conformed():
     cmd = build_extract_cmd(
         segment_path="/work/seg_in/seg_0000.mkv",
-        work_dir="/work",
+        frames_dir="/work/frames",
         fps="30000/1001",
         is_hdr=False,
         hdr_mode="tonemap",
@@ -69,7 +69,7 @@ def test_build_extract_cmd_vfr_conformed():
 def test_build_extract_cmd_vfr_hdr_conformed():
     cmd = build_extract_cmd(
         segment_path="/work/seg_in/seg_0000.mkv",
-        work_dir="/work",
+        frames_dir="/work/frames",
         fps="24/1",
         is_hdr=True,
         hdr_mode="tonemap",

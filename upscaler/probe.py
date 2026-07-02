@@ -168,3 +168,63 @@ def probe_video(video_path: str) -> VideoInfo:
         color_transfer=color_transfer,
         color_primaries=color_primaries,
     )
+
+def detect_video_type(video_path: str) -> str:
+    """Detects if a video is 'animation' or 'cinema' using color variance heuristics."""
+    import tempfile
+    import os
+    import uuid
+    
+    # Extract 1 frame from the video
+    temp_dir = tempfile.gettempdir()
+    temp_png = os.path.join(temp_dir, f"probe_{uuid.uuid4().hex}.png")
+    
+    cmd = [
+        "ffmpeg", "-y",
+        "-ss", "00:00:01",  # Seek to 1s to avoid black intro frames
+        "-i", video_path,
+        "-vframes", "1",
+        "-f", "image2",
+        "-vcodec", "png",
+        temp_png
+    ]
+    
+    # If seek to 1s fails, try without seeking
+    try:
+        subprocess.run(cmd, capture_output=True, check=True)
+    except subprocess.CalledProcessError:
+        cmd_noseek = [
+            "ffmpeg", "-y",
+            "-i", video_path,
+            "-vframes", "1",
+            "-f", "image2",
+            "-vcodec", "png",
+            temp_png
+        ]
+        try:
+            subprocess.run(cmd_noseek, capture_output=True, check=True)
+        except Exception:
+            return "cinema"  # Fallback
+
+    if not os.path.exists(temp_png):
+        return "cinema"
+
+    try:
+        from PIL import Image
+        img = Image.open(temp_png).convert("RGB")
+        img_small = img.resize((64, 64), Image.Resampling.LANCZOS)
+        colors = img_small.getcolors(maxcolors=4096)
+        num_colors = len(colors) if colors else 4096
+        img.close()
+        
+        # Heuristic: animation has fewer unique colors
+        is_anime = num_colors <= 800
+    except Exception:
+        is_anime = False
+    finally:
+        try:
+            os.remove(temp_png)
+        except Exception:
+            pass
+
+    return "animation" if is_anime else "cinema"

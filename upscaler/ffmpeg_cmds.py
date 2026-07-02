@@ -26,7 +26,7 @@ def build_split_cmd(
 
 def build_extract_cmd(
     segment_path: str,
-    work_dir: str,
+    frames_dir: str,
     fps: str,
     is_hdr: bool,
     hdr_mode: str,
@@ -34,7 +34,6 @@ def build_extract_cmd(
     vfr_mode: str
 ) -> List[str]:
     """Builds the ffmpeg command to extract frames from a segment, injecting VFR/HDR filters."""
-    frames_dir = os.path.join(work_dir, "frames")
     out_pattern = os.path.join(frames_dir, "f_%08d.png")
 
     filters: List[str] = []
@@ -95,19 +94,31 @@ def build_encode_cmd(
     preset: str,
     encoder_profile: str,
     quality: int,
-    bitrate: Optional[str] = None
+    bitrate: Optional[str] = None,
+    interpolate_fps: Optional[int] = None,
+    temporal_denoise: bool = False
 ) -> List[str]:
     """Builds the ffmpeg command to encode upscaled PNGs into a segment MP4."""
-    # Build filter chain for scaling
-    # target height
+    filters = []
+    
+    # 1. Temporal Denoising
+    if temporal_denoise:
+        filters.append("hqdn3d=1.5:1.5:3:3")
+        
+    # 2. Frame Rate Interpolation
+    if interpolate_fps:
+        filters.append(f"framerate=fps={interpolate_fps}")
+
+    # 3. Scaling
     from .plan import get_target_height
     target_h = get_target_height(preset)
     
-    # vaapi needs extra scale filters (format=nv12,hwupload)
     if encoder_profile == "vaapi":
-        vf_str = f"scale=-2:{target_h}:flags=lanczos,format=nv12,hwupload"
+        filters.append(f"scale=-2:{target_h}:flags=lanczos,format=nv12,hwupload")
     else:
-        vf_str = f"scale=-2:{target_h}:flags=lanczos"
+        filters.append(f"scale=-2:{target_h}:flags=lanczos")
+        
+    vf_str = ",".join(filters)
 
     cmd = [
         "ffmpeg",

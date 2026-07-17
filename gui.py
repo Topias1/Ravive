@@ -55,6 +55,11 @@ def run_upscale_thread(cmd_args):
             env=env
         )
         
+        current_file_idx = 1
+        total_files = 1
+        current_seg_idx = 1
+        total_segs = 1
+        
         buffer = []
         while True:
             char = active_process.stdout.read(1)
@@ -65,9 +70,14 @@ def run_upscale_thread(cmd_args):
                 buffer.clear()
                 if line:
                     with task_lock:
-                        task_state["logs"].append(line)
-                        if len(task_state["logs"]) > 100:
-                            task_state["logs"].pop(0)
+                        # Prevent realesrgan progress lines from flooding the log view
+                        is_realesrgan_progress = "[realesrgan]" in line and "%" in line
+                        if is_realesrgan_progress and task_state["logs"] and "[realesrgan]" in task_state["logs"][-1]:
+                            task_state["logs"][-1] = line
+                        else:
+                            task_state["logs"].append(line)
+                            if len(task_state["logs"]) > 100:
+                                task_state["logs"].pop(0)
                         
                         # Parse progress bars
                         if "%" in line:
@@ -77,7 +87,13 @@ def run_upscale_thread(cmd_args):
                                     val_str = val_str.split("]")[-1].strip()
                                 val_str = val_str.replace(",", ".")
                                 pct = float(val_str)
-                                task_state["progress"] = max(0.0, min(100.0, pct))
+                                
+                                # Calculate overall progress across files and segments
+                                file_progress = ((current_seg_idx - 1) * 100.0 + pct) / total_segs
+                                file_progress = max(0.0, min(100.0, file_progress))
+                                
+                                overall_pct = ((current_file_idx - 1) * 100.0 + file_progress) / total_files
+                                task_state["progress"] = max(0.0, min(100.0, overall_pct))
                             except ValueError:
                                 pass
                         
@@ -87,6 +103,13 @@ def run_upscale_thread(cmd_args):
                                 parts = line.split(":", 1)
                                 file_part = parts[0].replace("File", "").strip() # "1/3"
                                 filename_part = parts[1].strip() # "video.mp4"
+                                if "/" in file_part:
+                                    f_idx_str, f_tot_str = file_part.split("/", 1)
+                                    current_file_idx = int(f_idx_str)
+                                    total_files = int(f_tot_str)
+                                    # Reset segment tracking for new file
+                                    current_seg_idx = 1
+                                    total_segs = 1
                                 task_state["current_file_info"] = {
                                     "progress": file_part,
                                     "name": filename_part
@@ -100,6 +123,10 @@ def run_upscale_thread(cmd_args):
                             try:
                                 parts = line.split(":", 1)
                                 seg_part = parts[0].replace("Segment", "").strip() # "1/2"
+                                if "/" in seg_part:
+                                    s_idx_str, s_tot_str = seg_part.split("/", 1)
+                                    current_seg_idx = int(s_idx_str)
+                                    total_segs = int(s_tot_str)
                                 # Check if total segments is 1, in which case we don't need to append "Part 1/1"
                                 if seg_part == "1/1":
                                     if "current_file_info" in task_state:
@@ -270,6 +297,9 @@ class GUIHandler(BaseHTTPRequestHandler):
             cmd_args.extend(["--model", model])
             cmd_args.extend(["--workers", str(workers)])
             cmd_args.append("--force")
+            # Conform variable-frame-rate sources to CFR so they process
+            # instead of erroring on the CLI's default --vfr-mode error.
+            cmd_args.extend(["--vfr-mode", "cfr"])
             
             if denoise:
                 cmd_args.append("--temporal-denoise")

@@ -410,7 +410,18 @@ def run_single_file(
             # Reconcile extracted PNGs
             png_files = [f for f in os.listdir(frames_dir) if f.endswith(".png")]
             png_count = len(png_files)
-            if png_count != seg_frame_count:
+            # CFR conformance (--vfr-mode cfr) resamples via the fps= filter, so
+            # the extracted PNG count legitimately differs from the source segment
+            # frame count. The resampled count is authoritative; downstream stages
+            # reconcile against png_count. Only require a non-empty extraction here.
+            cfr_conformed = info.is_vfr and opts["vfr_mode"] == "cfr"
+            if cfr_conformed:
+                if png_count == 0:
+                    raise ReconciliationError(
+                        f"Frame extraction produced no PNGs for {seg_name} "
+                        f"(segment frame count: {seg_frame_count})."
+                    )
+            elif png_count != seg_frame_count:
                 raise ReconciliationError(
                     f"Frame extraction reconciliation mismatch for {seg_name}.\n"
                     f"Segment frame count: {seg_frame_count}\n"
@@ -464,7 +475,16 @@ def run_single_file(
 
             # Verify encoded frame count
             encoded_frame_count = get_exact_frame_count(out_seg_path)
-            if encoded_frame_count != png_count:
+            # Frame interpolation (--interpolate-fps) intentionally resamples the
+            # output to a new framerate, so the encoded count legitimately differs
+            # from png_count. Only require a non-empty encode in that case.
+            if opts.get("interpolate_fps"):
+                if encoded_frame_count <= 0:
+                    raise ReconciliationError(
+                        f"Encoder produced no frames for {seg_name} "
+                        f"(input PNG count: {png_count})."
+                    )
+            elif encoded_frame_count != png_count:
                 raise ReconciliationError(
                     f"Encoder frame reconciliation mismatch for {seg_name}.\n"
                     f"Expected frame count: {png_count}\n"

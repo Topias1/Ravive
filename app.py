@@ -78,6 +78,25 @@ def main():
     webview.start()
 
 if __name__ == "__main__":
+    # In a frozen bundle sys.executable is this app, so anything asking Python
+    # for a helper process re-launches it — multiprocessing does exactly that
+    # ("<app> -c 'from multiprocessing.resource_tracker import main;main(5)'"),
+    # and the CLI branch below then read that code string as a file to upscale.
+    # freeze_support hands those re-launches back to multiprocessing before any
+    # argument parsing sees them.
+    import multiprocessing
+    multiprocessing.freeze_support()
+
+    # freeze_support only claims the "--multiprocessing-fork" form. The
+    # resource tracker uses "-c <code>" instead, which slips past it, so act
+    # as the interpreter it expects. Restricted to multiprocessing's own
+    # bootstrap rather than running any -c payload handed to the app.
+    if len(sys.argv) >= 3 and sys.argv[1] == "-c" and "multiprocessing" in sys.argv[2]:
+        bootstrap = sys.argv[2]
+        sys.argv = sys.argv[2:]
+        exec(bootstrap, {"__name__": "__main__"})
+        sys.exit(0)
+
     if os.environ.get("VIDEO_UPSCALER_CLI") == "1":
         # Run as the CLI upscaler helper
         import upscale

@@ -59,9 +59,10 @@ def main():
     api = Api()
     
     # Create webview window
+    port = int(os.environ.get("RAVIVE_GUI_PORT", "8080"))
     window = webview.create_window(
-        title="Apple Silicon Video Upscaler",
-        url="http://127.0.0.1:8080",
+        title="Ravive",
+        url=f"http://127.0.0.1:{port}",
         width=900,
         height=750,
         min_size=(800, 650),

@@ -28,7 +28,7 @@ A robust, resumable desktop app and CLI pipeline for macOS that upscales videos 
 - pywebview - Native macOS window wrapping the local web GUI (`app.py`, imports `webview`; `webview.create_window`, `webview.start`)
 - `http.server` (stdlib `BaseHTTPRequestHandler`/`HTTPServer`) - Local GUI backend on `127.0.0.1:8080` (`gui.py:7`)
 - pytest - Unit + integration tests under `tests/` (`tests/test_*.py`), config cache in `.pytest_cache/`
-- PyInstaller - Packages the app into `AppleSiliconVideoUpscaler.app` (`AppleSiliconVideoUpscaler.spec`, `.venv/bin/pyinstaller`); UPX compression enabled, icon `logo.icns`
+- PyInstaller - Packages the app into `Ravive.app` (`Ravive.spec`, `.venv/bin/pyinstaller`); UPX compression enabled, icon `logo.icns`
 - UPX - Binary compression during PyInstaller `EXE`/`COLLECT`
 ## Key Dependencies
 - `tqdm` - Progress bar rendering for CLI batch/pipeline stages
@@ -43,7 +43,7 @@ A robust, resumable desktop app and CLI pipeline for macOS that upscales videos 
 - `VIDEO_UPSCALER_CLI=1` - Switches `app.py` from GUI mode to CLI helper mode (`app.py` `__main__`, set by `gui.py` when spawning the worker)
 - `PYTHONUNBUFFERED=1` - Set by `gui.py` on the subprocess env to stream progress without buffering
 - No `.env` file present; no secret-bearing configuration detected
-- `AppleSiliconVideoUpscaler.spec` - PyInstaller build config; bundles `upscale.py`, `upscaler/`, `gui.py`, `logo.jpg` as data; entry point `app.py`
+- `Ravive.spec` - PyInstaller build config; bundles `upscale.py`, `upscaler/`, `gui.py`, `logo.jpg` as data; entry point `app.py`
 - No `pyproject.toml` / `setup.py` — project is script-based, not an installable package
 ## Platform Requirements
 - macOS on Apple Silicon (arm64), Python 3.14 via Homebrew
@@ -138,7 +138,7 @@ A robust, resumable desktop app and CLI pipeline for macOS that upscales videos 
 ## Layers
 - Purpose: Wrap the local server in a native macOS webview window; provide Finder dialogs.
 - Depends on: `pywebview`, `gui.main`.
-- Used by: PyInstaller bundle entry (`AppleSiliconVideoUpscaler.spec`).
+- Used by: PyInstaller bundle entry (`Ravive.spec`).
 - Purpose: Serve UI, translate form input into CLI args, stream child-process output into `task_state`.
 - Depends on: stdlib `http.server`, `subprocess`, `upscale.py` (as child).
 - Used by: `app.py` (thread) or run standalone.

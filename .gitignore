@@ -19,10 +19,6 @@ upscaler/models/
 .planning/codebase/
 docs/superpowers/specs/
 
-# Helper binaries, supplied locally like upscaler/bin/ and upscaler/models/
-# (see README "Developer Setup") — 30 MB each, never in git history.
-/ffmpeg
-/ffprobe
 
 # Scratch
 test_work/
@@ -31,7 +27,3 @@ test_work/
 # Superseded icon assets: the previous logo.icns / logo.jpg are recoverable
 # from git history, so the local backup does not belong in it.
 branding/previous/
-
-# Bundled ffmpeg/ffprobe binaries (~59 MB, fetched or built out of band)
-ffmpeg
-ffprobe

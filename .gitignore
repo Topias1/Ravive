@@ -18,3 +18,16 @@ upscaler/models/
 *.png
 .planning/codebase/
 docs/superpowers/specs/
+
+# Helper binaries, supplied locally like upscaler/bin/ and upscaler/models/
+# (see README "Developer Setup") — 30 MB each, never in git history.
+/ffmpeg
+/ffprobe
+
+# Scratch
+test_work/
+.playwright-mcp/
+*.iconset/
+# Superseded icon assets: the previous logo.icns / logo.jpg are recoverable
+# from git history, so the local backup does not belong in it.
+branding/previous/
